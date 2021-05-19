@@ -21,11 +21,10 @@ public class RedisServer {
 
     ChannelFuture f = null;
 
-    ServerProperty property = null;
+    RedisServerProperty property = null;
 
-
-    public void start(ServerProperty serverProperty) {
-        property = serverProperty;
+    public void start(RedisServerProperty redisServerProperty) {
+        property = redisServerProperty;
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)

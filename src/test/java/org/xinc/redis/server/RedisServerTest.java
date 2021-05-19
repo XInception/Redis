@@ -14,6 +14,6 @@ class RedisServerTest {
     static void start() throws IOException {
         log.info("start redis server");
         server = new RedisServer();
-        server.start(new ServerProperty("/application.properties"));
+        server.start(new RedisServerProperty("/application-server.properties"));
     }
 }
