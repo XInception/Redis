@@ -1,17 +1,20 @@
-package org.xinc.redis.server;
+package org.xinc.redis.downstream;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.redis.*;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.codec.redis.RedisDecoder;
+import io.netty.handler.codec.redis.RedisEncoder;
 import lombok.extern.slf4j.Slf4j;
 import org.xinc.redis.RedisInception;
 
 @Slf4j
-public class RedisServer {
+public class DownStreamServer {
 
     EventLoopGroup bossGroup = new NioEventLoopGroup(1);
 
@@ -21,10 +24,10 @@ public class RedisServer {
 
     ChannelFuture f = null;
 
-    RedisServerProperty property = null;
+    DownStreamServerProperty property = null;
 
-    public void start(RedisServerProperty redisServerProperty) {
-        property = redisServerProperty;
+    public void start(DownStreamServerProperty downStreamServerProperty) {
+        property = downStreamServerProperty;
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
@@ -36,11 +39,11 @@ public class RedisServer {
 //                            pipeline.addLast(new LoggingHandler());
                             pipeline.addLast(new RedisDecoder());
                             pipeline.addLast(new RedisEncoder());
-                            pipeline.addLast(new RedisServerHandler(redisInception));
+                            pipeline.addLast(new DownStreamServerHandler(redisInception));
                         }
                     });
             f = b.bind(property.server, property.port);
-            log.info("REDIS DEMON 启动完成 {} {} ", property.server, property.port);
+            log.info("REDIS DEMON 启动  {} {} ", property.server, property.port);
             f.channel().closeFuture().sync();
         } catch (Exception e) {
             e.printStackTrace();

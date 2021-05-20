@@ -1,13 +1,7 @@
 package org.xinc.redis;
 
 
-import org.apache.commons.pool2.KeyedObjectPool;
-import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
 import org.junit.jupiter.api.Test;
-import org.xinc.redis.client.RedisClient;
-
-import java.util.HashMap;
-import java.util.Map;
 
 class RedisUpstreamPoolTest {
 

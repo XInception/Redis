@@ -1,4 +1,4 @@
-package org.xinc.redis.client;
+package org.xinc.redis.upstream;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -7,11 +7,11 @@ import io.netty.channel.ChannelPromise;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RedisClientHandler extends ChannelDuplexHandler {
+public class UpstreamClientHandler extends ChannelDuplexHandler {
 
     Channel downStreamChanel = null;
 
-    public RedisClientHandler(Channel downStreamChanel) {
+    public UpstreamClientHandler(Channel downStreamChanel) {
         this.downStreamChanel = downStreamChanel;
     }
 

@@ -1,4 +1,4 @@
-package org.xinc.redis.client;
+package org.xinc.redis.upstream;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -7,20 +7,20 @@ import java.util.Properties;
 /**
  * @author Admin
  */
-public class RedisClientProperty {
+public class UpstreamClientProperty {
 
     String server;
     Integer port;
 
-    public RedisClientProperty(String s) throws IOException {
+    public UpstreamClientProperty(String s) throws IOException {
         this.loadProperty(s);
     }
 
     public void loadProperty(InputStream stream) throws IOException {
         Properties properties = new Properties();
         properties.load(stream);
-        this.server=properties.getProperty("app.redis.server");
-        this.port=Integer.parseInt(properties.getProperty("app.redis.port"));
+        this.server=properties.getProperty("app.redis.upstream.server");
+        this.port=Integer.parseInt(properties.getProperty("app.redis.upstream.port"));
     }
 
     public void loadProperty(String path) throws IOException {

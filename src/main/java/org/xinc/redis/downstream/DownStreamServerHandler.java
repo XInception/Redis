@@ -1,47 +1,48 @@
-package org.xinc.redis.server;
+package org.xinc.redis.downstream;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.CodecException;
-import io.netty.handler.codec.redis.*;
+import io.netty.handler.codec.redis.ArrayHeaderRedisMessage;
+import io.netty.handler.codec.redis.ErrorRedisMessage;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.KeyedObjectPool;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
-import org.xinc.redis.RedisInception;
 import org.xinc.function.InceptionException;
+import org.xinc.redis.RedisInception;
 import org.xinc.redis.RedisUpstreamPool;
-import org.xinc.redis.client.RedisClient;
+import org.xinc.redis.upstream.UpstreamClient;
 
-import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
-public class RedisServerHandler extends ChannelDuplexHandler {
+public class DownStreamServerHandler extends ChannelDuplexHandler {
 
     RedisInception redisInception = new RedisInception();
 
-    KeyedObjectPool<Map<String, Object>, RedisClient> upstreamPool = new GenericKeyedObjectPool<>(new RedisUpstreamPool());
+    KeyedObjectPool<Map<String, Object>, UpstreamClient> upstreamPool = new GenericKeyedObjectPool<>(new RedisUpstreamPool());
 
     HashMap<String, Object> config = new HashMap<>();
 
-    public RedisServerHandler(RedisInception redisInception) {
+    public DownStreamServerHandler(RedisInception redisInception) {
         this.redisInception = redisInception;
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         log.info("客户端已经离线 返还 redis 句柄");
-        RedisClient redisClient = (RedisClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
-        upstreamPool.returnObject(config, redisClient);
+        UpstreamClient upstreamClient = (UpstreamClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
+        upstreamPool.returnObject(config, upstreamClient);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.info("客户端已经上线 获取redis 句柄");
         config.put("downStream",ctx.channel());
-        RedisClient redisClient = upstreamPool.borrowObject(config);
-        ctx.channel().attr(AttributeKey.valueOf("redis_connect")).set(redisClient);
+        UpstreamClient upstreamClient = upstreamPool.borrowObject(config);
+        ctx.channel().attr(AttributeKey.valueOf("redis_connect")).set(upstreamClient);
         ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);
         ctx.channel().attr(AttributeKey.valueOf("redis_cmd")).set(new ArrayList<>());
     }
@@ -57,11 +58,11 @@ public class RedisServerHandler extends ChannelDuplexHandler {
         }
         msgs.add(msg);
         if(msgs.size()==(int)ctx.channel().attr(AttributeKey.valueOf("redis_len")).get()){
-            RedisClient redisClient = (RedisClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
+            UpstreamClient upstreamClient = (UpstreamClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
 
             try {
                 redisInception.checkRule(msgs);
-                redisClient.forwordUpstream(msgs);
+                upstreamClient.forwordUpstream(msgs);
             } catch (InceptionException e) {
                 System.out.println(e.getMessage());
                 ctx.writeAndFlush(new ErrorRedisMessage(e.getMessage()));

@@ -1,12 +1,15 @@
-package org.xinc.redis.client;
+package org.xinc.redis.upstream;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.redis.*;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.codec.redis.DefaultBulkStringRedisContent;
+import io.netty.handler.codec.redis.RedisDecoder;
+import io.netty.handler.codec.redis.RedisEncoder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
@@ -16,7 +19,7 @@ import java.util.List;
  * @author crtrpt
  */
 @Slf4j
-public class RedisClient {
+public class UpstreamClient {
 
     private EventLoopGroup eventLoopGroup;
 
@@ -26,9 +29,9 @@ public class RedisClient {
 
     Channel downstreamChannel;
 
-    RedisClientProperty clientProperty;
+    UpstreamClientProperty clientProperty;
 
-    public RedisClient(RedisClientProperty redisServerProperty, Channel downStream) {
+    public UpstreamClient(UpstreamClientProperty redisServerProperty, Channel downStream) {
         this.clientProperty = redisServerProperty;
         this.downstreamChannel = downStream;
         this.start();
@@ -45,7 +48,7 @@ public class RedisClient {
 //                ch.pipeline().addLast(new LoggingHandler());
                 ch.pipeline().addLast(new RedisEncoder());
                 ch.pipeline().addLast(new RedisDecoder());
-                ch.pipeline().addLast(new RedisClientHandler(downstreamChannel));
+                ch.pipeline().addLast(new UpstreamClientHandler(downstreamChannel));
             }
         });
         var cf = bootstrap.connect(clientProperty.server, clientProperty.port);
@@ -60,7 +63,7 @@ public class RedisClient {
         }
 
         upstreamChannel = cf.channel();
-        log.info("服务器信息:" + upstreamChannel.remoteAddress().toString());
+        log.info("server info:" + upstreamChannel.remoteAddress().toString());
     }
 
 
@@ -68,7 +71,7 @@ public class RedisClient {
 
         if (msg.get(2) instanceof DefaultBulkStringRedisContent) {
             String cmd = ((DefaultBulkStringRedisContent) msg.get(2)).content().toString(StandardCharsets.UTF_8);
-            System.out.println("redis 命令" + cmd);
+            System.out.println("redis command" + cmd);
         }
         for (Object m : msg) {
             this.upstreamChannel.write(m);
