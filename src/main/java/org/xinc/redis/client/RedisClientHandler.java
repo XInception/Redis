@@ -22,7 +22,7 @@ public class RedisClientHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        log.info("直接转发给下游");
+//        log.info("直接转发给下游");
         downStreamChanel.writeAndFlush(msg);
     }
 

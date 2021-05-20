@@ -33,7 +33,7 @@ public class RedisServer {
                         @Override
                         protected void initChannel(SocketChannel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(new LoggingHandler());
+//                            pipeline.addLast(new LoggingHandler());
                             pipeline.addLast(new RedisDecoder());
                             pipeline.addLast(new RedisEncoder());
                             pipeline.addLast(new RedisServerHandler(redisInception));

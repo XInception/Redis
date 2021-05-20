@@ -9,8 +9,8 @@ import io.netty.handler.codec.redis.*;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * @author crtrpt
@@ -22,7 +22,7 @@ public class RedisClient {
 
     private Bootstrap bootstrap;
 
-    Channel channel;
+    Channel upstreamChannel;
 
     Channel downstreamChannel;
 
@@ -30,7 +30,7 @@ public class RedisClient {
 
     public RedisClient(RedisClientProperty redisServerProperty, Channel downStream) {
         this.clientProperty = redisServerProperty;
-        this.downstreamChannel=downStream;
+        this.downstreamChannel = downStream;
         this.start();
     }
 
@@ -42,7 +42,7 @@ public class RedisClient {
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) {
-                ch.pipeline().addLast(new LoggingHandler());
+//                ch.pipeline().addLast(new LoggingHandler());
                 ch.pipeline().addLast(new RedisEncoder());
                 ch.pipeline().addLast(new RedisDecoder());
                 ch.pipeline().addLast(new RedisClientHandler(downstreamChannel));
@@ -59,15 +59,24 @@ public class RedisClient {
             throw new RuntimeException(cf.cause());
         }
 
-        channel = cf.channel();
-        log.info("服务器信息:" + channel.remoteAddress().toString());
+        upstreamChannel = cf.channel();
+        log.info("服务器信息:" + upstreamChannel.remoteAddress().toString());
     }
 
 
-    public void forwordUpstream(Object msg) throws InterruptedException {
-        this.channel.write(msg);
+    public void forwordUpstream(List<Object> msg) {
+
+        if (msg.get(2) instanceof DefaultBulkStringRedisContent) {
+            String cmd = ((DefaultBulkStringRedisContent) msg.get(2)).content().toString(StandardCharsets.UTF_8);
+            System.out.println("redis 命令" + cmd);
+        }
+        for (Object m : msg) {
+            this.upstreamChannel.write(m);
+        }
+        this.upstreamChannel.flush();
     }
-    public  void sync() throws InterruptedException {
-        this.channel.flush();
+
+    public void sync() throws InterruptedException {
+        this.upstreamChannel.flush();
     }
 }
