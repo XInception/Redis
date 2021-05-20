@@ -14,7 +14,10 @@ import org.xinc.redis.RedisUpstreamPool;
 import org.xinc.redis.client.RedisClient;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 
 @Slf4j
 public class RedisServerHandler extends ChannelDuplexHandler {
@@ -42,6 +45,8 @@ public class RedisServerHandler extends ChannelDuplexHandler {
         config.put("downStream",ctx.channel());
         RedisClient redisClient = upstreamPool.borrowObject(config);
         ctx.channel().attr(AttributeKey.valueOf("redis_connect")).set(redisClient);
+        ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);
+        ctx.channel().attr(AttributeKey.valueOf("redis_cmd")).set(new LinkedList<>());
     }
 
     @Override
@@ -50,28 +55,44 @@ public class RedisServerHandler extends ChannelDuplexHandler {
             redisInception.checkRule(msg);
         } catch (InceptionException e) {
             System.out.println(e.getMessage());
-            ctx.writeAndFlush(new SimpleStringRedisMessage(e.getMessage()));
+            ctx.writeAndFlush(new ErrorRedisMessage(e.getMessage()));
             return;
         }
+        if(msg instanceof ArrayHeaderRedisMessage){
+            Long len=  ((ArrayHeaderRedisMessage)msg).length();
+            ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(len);
+            return;
+        }
+//        Queue<RedisMessage> cmd= new LinkedList<RedisMessage>();
+//        var s = msg.toString();
+//        System.out.println("===============");
+//        System.out.println(msg);
 
-        var s = msg.toString();
-        log.info("转发请求给后端" + s);
+        LinkedList msgs=((LinkedList) ctx.channel().attr(AttributeKey.valueOf("redis_cmd")).get());
 
-        RedisClient redisClient = (RedisClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
+        msgs.addLast(msg);
 
-        try {
-            redisClient.forwordUpstream(msg);
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.info("转发到后端报错");
+
+        if(msgs.size()==Math.toIntExact((Long) ctx.channel().attr(AttributeKey.valueOf("redis_len")).get())){
+            log.info("转发请求给后端"+msgs.size());
+            RedisClient redisClient = (RedisClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
+
+            while (msgs.isEmpty()){
+                Object m=msgs.peekFirst();
+                redisClient.forwordUpstream(m);
+            }
+            redisClient.sync();
+            msgs.clear();
+            try {
+                redisInception.checkRule("");
+            } catch (InceptionException e) {
+                //返回结果或者预处理
+                //邮件警告 ====
+            }
         }
 
-        try {
-            redisInception.checkRule("");
-        } catch (InceptionException e) {
-            //返回结果或者预处理
-            //邮件警告 ====
-        }
+
+
     }
 
     @Override

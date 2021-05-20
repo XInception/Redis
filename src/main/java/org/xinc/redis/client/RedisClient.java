@@ -65,6 +65,9 @@ public class RedisClient {
 
 
     public void forwordUpstream(Object msg) throws InterruptedException {
-        this.channel.writeAndFlush(msg).sync();
+        this.channel.write(msg);
+    }
+    public  void sync() throws InterruptedException {
+        this.channel.flush();
     }
 }
