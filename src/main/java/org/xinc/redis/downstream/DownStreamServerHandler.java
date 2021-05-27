@@ -20,7 +20,7 @@ import java.util.Map;
 @Slf4j
 public class DownStreamServerHandler extends ChannelDuplexHandler {
 
-    RedisInception redisInception = new RedisInception();
+    RedisInception redisInception = null;
 
     KeyedObjectPool<Map<String, Object>, UpstreamClient> upstreamPool = new GenericKeyedObjectPool<>(new RedisUpstreamPool());
 
@@ -40,7 +40,7 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.info("客户端已经上线 获取redis 句柄");
-        config.put("downStream",ctx.channel());
+        config.put("downStream", ctx.channel());
         UpstreamClient upstreamClient = upstreamPool.borrowObject(config);
         ctx.channel().attr(AttributeKey.valueOf("redis_connect")).set(upstreamClient);
         ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);
@@ -49,22 +49,22 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        ArrayList msgs=((ArrayList) ctx.channel().attr(AttributeKey.valueOf("redis_cmd")).get());
-        if(msg instanceof ArrayHeaderRedisMessage){
-            int len= Math.toIntExact(((ArrayHeaderRedisMessage)msg).length())*2+1 ;
+        ArrayList msgs = ((ArrayList) ctx.channel().attr(AttributeKey.valueOf("redis_cmd")).get());
+        if (msg instanceof ArrayHeaderRedisMessage) {
+            int len = Math.toIntExact(((ArrayHeaderRedisMessage) msg).length()) * 2 + 1;
             ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(len);
             msgs.add(msg);
             return;
         }
         msgs.add(msg);
-        if(msgs.size()==(int)ctx.channel().attr(AttributeKey.valueOf("redis_len")).get()){
+        if (msgs.size() == (int) ctx.channel().attr(AttributeKey.valueOf("redis_len")).get()) {
             UpstreamClient upstreamClient = (UpstreamClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
 
             try {
                 redisInception.checkRule(msgs);
                 upstreamClient.forwordUpstream(msgs);
             } catch (InceptionException e) {
-                System.out.println(e.getMessage());
+                log.info(e.getMessage());
                 ctx.writeAndFlush(new ErrorRedisMessage(e.getMessage()));
             }
             ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);

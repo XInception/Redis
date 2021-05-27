@@ -10,23 +10,26 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
+import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.xinc.redis.RedisInception;
+import org.xinc.redis.upstream.UpstreamClientProperty;
 
 @Slf4j
 public class DownStreamServer {
 
-    EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+    static EventLoopGroup bossGroup = new NioEventLoopGroup(1);
 
-    EventLoopGroup workerGroup = new NioEventLoopGroup();
+    static EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-    RedisInception redisInception=new RedisInception();
+    RedisInception redisInception=null;
 
     ChannelFuture f = null;
 
     DownStreamServerProperty property = null;
 
     public void start(DownStreamServerProperty downStreamServerProperty) {
+        redisInception=new RedisInception(downStreamServerProperty);
         property = downStreamServerProperty;
         try {
             ServerBootstrap b = new ServerBootstrap();
@@ -43,7 +46,7 @@ public class DownStreamServer {
                         }
                     });
             f = b.bind(property.server, property.port);
-            log.info("REDIS DEMON 启动  {} {} ", property.server, property.port);
+            log.info("REDIS Initializer Successfully started  {} {} ", property.server, property.port);
             f.channel().closeFuture().sync();
         } catch (Exception e) {
             e.printStackTrace();

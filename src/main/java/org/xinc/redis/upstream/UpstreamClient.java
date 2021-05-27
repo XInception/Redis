@@ -21,9 +21,9 @@ import java.util.List;
 @Slf4j
 public class UpstreamClient {
 
-    private EventLoopGroup eventLoopGroup;
+    private static EventLoopGroup eventLoopGroup;
 
-    private Bootstrap bootstrap;
+    private static Bootstrap bootstrap;
 
     Channel upstreamChannel;
 
@@ -68,11 +68,6 @@ public class UpstreamClient {
 
 
     public void forwordUpstream(List<Object> msg) {
-
-        if (msg.get(2) instanceof DefaultBulkStringRedisContent) {
-            String cmd = ((DefaultBulkStringRedisContent) msg.get(2)).content().toString(StandardCharsets.UTF_8);
-            System.out.println("redis command" + cmd);
-        }
         for (Object m : msg) {
             this.upstreamChannel.write(m);
         }

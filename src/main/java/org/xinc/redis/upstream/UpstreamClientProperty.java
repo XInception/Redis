@@ -1,5 +1,6 @@
 package org.xinc.redis.upstream;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -24,6 +25,6 @@ public class UpstreamClientProperty {
     }
 
     public void loadProperty(String path) throws IOException {
-        loadProperty( this.getClass().getResourceAsStream(path));
+        loadProperty( new FileInputStream(path));
     }
 }
