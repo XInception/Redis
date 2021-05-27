@@ -31,7 +31,7 @@ public class Main {
         }
         server = new DownStreamServer();
         try {
-            server.start(new DownStreamServerProperty(commandLine.getOptionValue("c")));
+            server.start(new DownStreamServerProperty(commandLine.getOptionValue("c","./redis/application-server.properties")));
         } catch (IOException e) {
             e.printStackTrace();
         }

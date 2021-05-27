@@ -34,14 +34,18 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         log.info("客户端已经离线 返还 redis 句柄");
         UpstreamClient upstreamClient = (UpstreamClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
-        upstreamPool.returnObject(config, upstreamClient);
+//        upstreamClient.close();
+        if(upstreamClient!=null){
+            upstreamClient.removeDownstream();
+            upstreamPool.returnObject(config, upstreamClient);
+        }
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.info("客户端已经上线 获取redis 句柄");
-        config.put("downStream", ctx.channel());
         UpstreamClient upstreamClient = upstreamPool.borrowObject(config);
+        upstreamClient.setDownStream(ctx.channel());
         ctx.channel().attr(AttributeKey.valueOf("redis_connect")).set(upstreamClient);
         ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);
         ctx.channel().attr(AttributeKey.valueOf("redis_cmd")).set(new ArrayList<>());

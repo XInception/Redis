@@ -17,7 +17,7 @@ public class RedisUpstreamPool extends BaseKeyedPooledObjectFactory<Map<String, 
     public UpstreamClient create(Map<String, Object> stringObjectMap) throws Exception {
         log.info("获取客户端");
 
-        return new UpstreamClient(new UpstreamClientProperty( Main.commandLine.getOptionValue("c","./application-server.properties")),(Channel) stringObjectMap.get("downStream"));
+        return new UpstreamClient(new UpstreamClientProperty( Main.commandLine.getOptionValue("c","./redis/application-server.properties")));
     }
 
     @Override
