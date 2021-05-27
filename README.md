@@ -12,6 +12,7 @@ source -> input inception -> upstream -> redis -> output inception->downstream -
 ## TODO
 - client 断线重连
 - server 断线重连
+- 处理重连事件策略
 
 
 ## 如何使用

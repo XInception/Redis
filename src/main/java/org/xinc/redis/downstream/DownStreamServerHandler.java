@@ -70,6 +70,8 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
             } catch (InceptionException e) {
                 log.info(e.getMessage());
                 ctx.writeAndFlush(new ErrorRedisMessage(e.getMessage()));
+            }catch (Exception e){
+                ctx.writeAndFlush(new ErrorRedisMessage(e.getMessage()));
             }
             ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);
             msgs.clear();
