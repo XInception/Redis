@@ -3,7 +3,9 @@ package org.xinc.redis.downstream;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.redis.ArrayHeaderRedisMessage;
+import io.netty.handler.codec.redis.DefaultBulkStringRedisContent;
 import io.netty.handler.codec.redis.ErrorRedisMessage;
+import io.netty.handler.codec.redis.SimpleStringRedisMessage;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.KeyedObjectPool;
@@ -13,9 +15,8 @@ import org.xinc.redis.RedisInception;
 import org.xinc.redis.RedisUpstreamPool;
 import org.xinc.redis.upstream.UpstreamClient;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 @Slf4j
 public class DownStreamServerHandler extends ChannelDuplexHandler {
@@ -26,8 +27,11 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
 
     HashMap<String, Object> config = new HashMap<>();
 
-    public DownStreamServerHandler(RedisInception redisInception) {
+    Properties properties = null;
+
+    public DownStreamServerHandler(RedisInception redisInception, DownStreamServerProperty property) {
         this.redisInception = redisInception;
+        this.properties = property;
     }
 
     @Override
@@ -35,7 +39,7 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
         log.info("客户端已经离线 返还 redis 句柄");
         UpstreamClient upstreamClient = (UpstreamClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
 //        upstreamClient.close();
-        if(upstreamClient!=null){
+        if (upstreamClient != null) {
             upstreamClient.removeDownstream();
             upstreamPool.returnObject(config, upstreamClient);
         }
@@ -49,6 +53,7 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
         ctx.channel().attr(AttributeKey.valueOf("redis_connect")).set(upstreamClient);
         ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);
         ctx.channel().attr(AttributeKey.valueOf("redis_cmd")).set(new ArrayList<>());
+        ctx.channel().attr(AttributeKey.valueOf("is_auth")).set(false);
     }
 
     @Override
@@ -63,6 +68,31 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
         msgs.add(msg);
         if (msgs.size() == (int) ctx.channel().attr(AttributeKey.valueOf("redis_len")).get()) {
             UpstreamClient upstreamClient = (UpstreamClient) ctx.channel().attr(AttributeKey.valueOf("redis_connect")).get();
+            boolean isAuth = (boolean) ctx.channel().attr(AttributeKey.valueOf("is_auth")).get();
+            String cmd = ((DefaultBulkStringRedisContent) msgs.get(2)).content().toString(StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+            if (!isAuth) {
+                if ("auth".equals(cmd)) {
+                    String password = ((DefaultBulkStringRedisContent) msgs.get(4)).content().toString(StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+                    System.out.println("密码"+password);
+                    if (properties.getProperty("app.redis.password", "9527").equals(password)) {
+                        ctx.writeAndFlush(new SimpleStringRedisMessage("OK"));
+                        ctx.channel().attr(AttributeKey.valueOf("is_auth")).set(true);
+                    } else {
+                        ctx.writeAndFlush(new ErrorRedisMessage("密码错误"));
+                    }
+
+                } else {
+                    ctx.writeAndFlush(new ErrorRedisMessage("请使用 auth命令 授权"));
+                }
+                msgs.clear();
+                return;
+            } else {
+                if ("auth".equals(cmd)) {
+                    ctx.writeAndFlush(new ErrorRedisMessage("已经授权成功 无需继续授权"));
+                    msgs.clear();
+                    return;
+                }
+            }
 
             try {
                 redisInception.checkRule(msgs);
@@ -70,7 +100,7 @@ public class DownStreamServerHandler extends ChannelDuplexHandler {
             } catch (InceptionException e) {
                 log.info(e.getMessage());
                 ctx.writeAndFlush(new ErrorRedisMessage(e.getMessage()));
-            }catch (Exception e){
+            } catch (Exception e) {
                 ctx.writeAndFlush(new ErrorRedisMessage(e.getMessage()));
             }
             ctx.channel().attr(AttributeKey.valueOf("redis_len")).set(-1);

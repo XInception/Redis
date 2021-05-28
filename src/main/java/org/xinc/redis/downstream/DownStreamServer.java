@@ -44,7 +44,7 @@ public class DownStreamServer {
 //                            pipeline.addLast(new LoggingHandler());
                             pipeline.addLast(new RedisDecoder());
                             pipeline.addLast(new RedisEncoder());
-                            pipeline.addLast(new DownStreamServerHandler(redisInception));
+                            pipeline.addLast(new DownStreamServerHandler(redisInception,property));
                         }
                     });
             f = b.bind(property.server, property.port);
